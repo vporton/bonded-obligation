@@ -78,12 +78,11 @@ test(`Time release contract`, async t => {
           }
         }
 
-        const sendInvite = inviteIssuer.claim(publicAPI.makeSendPledgeInvite(
-          harden(receiver), harden(pledge), harden(issuer), harden(ransomAmount), harden(date)
-        )());
+        const sendPledgeInvite = inviteIssuer.claim(publicAPI.makeSendPledgeInvite(
+          harden(receiver), harden(pledge), harden(issuer), harden(ransomAmount), harden(date))());
         const aliceProposal = {};
         return zoe
-          .offer(sendInvite, harden(aliceProposal), {})
+          .offer(sendPledgeInvite, harden(aliceProposal), {})
           .then(
             async ({
               outcome: outcomeP,
@@ -101,9 +100,31 @@ test(`Time release contract`, async t => {
           )
       }
 
-      // receivePledge({publicAPI, receiverPayment}) {
-      //   const handle = 
-      // }
+      async receivePledge({publicAPI, receiverPayment}) {
+        const receiverAmount = await E(publicAPI.issuer).getAmountOf(receiverPayment);
+        const handle = receiverAmount.extent[0][0];
+
+        const receivePledgeInvite = inviteIssuer.claim(publicAPI.makeReceivePledgeInvite(harden(handle)()));
+        const bobProposal = {};
+        return zoe
+          .offer(receivePledgeInvite, harden(bobProposal), {})
+          .then(
+            async ({
+              outcome: outcomeP,
+              payout,
+              cancelObj: { cancel: complete },
+              offerHandle,
+            }) => {
+              const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper);
+              const pledge = amount.extent[0][0];
+
+              return {
+                publicAPI,
+                pledge,
+              };
+            },
+          )
+      }
     }
 
     async function pushPullMoney(date, positive) {
@@ -111,6 +132,16 @@ test(`Time release contract`, async t => {
 
       myTester.sendPledge(date)
         .then(myTester.receivePledge)
+        .then(({publicAPI, pledge}) => {
+          t.equal(pledge, null, `pledge too early to return.`)
+        })
+        .then(() => {
+          E(timerService).tick("Going to the future");
+        })
+        .then(myTester.receivePledge)
+        .then(({publicAPI, pledge}) => {
+          console.log("pledge", pledge);
+        })
         // .then(() => {
         //   const receiveInvite = inviteIssuer.claim(publicAPI.makeReceiveInvite(handle)());
         //   const bobProposal = {}

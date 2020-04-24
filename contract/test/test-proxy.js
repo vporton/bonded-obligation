@@ -130,7 +130,7 @@ test(`Time release contract`, async t => {
     async function pushPullMoney(date, positive) {
       let myTester = new MyTester();
 
-      myTester.sendPledge(date)
+      return myTester.sendPledge(date)
         .then(myTester.receivePledge)
         .then(({publicAPI, pledge}) => {
           t.equal(pledge, null, `pledge too early to return.`)
@@ -142,37 +142,6 @@ test(`Time release contract`, async t => {
         .then(({publicAPI, pledge}) => {
           console.log("pledge", pledge);
         })
-        // .then(() => {
-        //   const receiveInvite = inviteIssuer.claim(publicAPI.makeReceiveInvite(handle)());
-        //   const bobProposal = {}
-        //   return zoe
-        //     .offer(receiveInvite, harden(bobProposal), {})
-        //     .then(
-        //       async ({
-        //         outcome: outcomeP,
-        //         payout,
-        //         cancelObj: { cancel: complete },
-        //         offerHandle,
-        //       }) => {
-        //         const wrapperPayment = await (await payout).Wrapper;
-        //         const amount = await E(publicAPI.issuer).getAmountOf(wrapperPayment);
-        //         const payment = await E(publicAPI.issuer).getAmountOf(amount.extent[0][0]);
-        //         const timeRelease = payment.extent[0][0];
-        //         const realPayment = await timeRelease.getPayment()
-        //         if(!positive) {
-        //           t.equal(realPayment, null, `There is no payment yet.`)
-        //         } else {
-        //           t.equal((await issuer.getAmountOf(realPayment)).extent, 1000, `correct payment amount`)
-        
-        //           return {
-        //             publicAPI,
-        //             operaPayout: payout,
-        //             complete,
-        //           };
-        //         }
-        //       }
-        //     )
-        // })
         .then(() => {
           return { publicAPI };
         });

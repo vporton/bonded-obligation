@@ -3,7 +3,7 @@ import harden from '@agoric/harden';
 import produceIssuer from '@agoric/ertp';
 import { makeZoeHelpers } from '@agoric/zoe/src/contractSupport';
 
-import { makeTimeRelease, makeObligation } from './obligation';
+import { makeObligation } from './obligation';
 import { cleanProposal } from '@agoric/zoe/src/cleanProposal';
 
 
@@ -31,8 +31,8 @@ export const makeContract = harden(zcf => {
     }
 
     // the contract creates an offer {give: wrapper, want: nothing} with the time release wrapper
-    const sendPledgeHook = (receiver, pledge, ransomAmount, handle, date) => userOfferHandle => {
-      const obligation = makeObligation(zcf, timerService, pledge, ransomAmount, date);
+    const sendPledgeHook = (receiver, pledge, ransomIssuer, ransomAmount, handle, date) => userOfferHandle => {
+      const obligation = makeObligation(zcf, timerService, pledge, ransomIssuer, ransomAmount, date);
 
       // unique handles
       const senderHandle = {};
@@ -133,7 +133,8 @@ export const makeContract = harden(zcf => {
           harden({ give: { Wrapper: wrapperAmount } }),
           harden({ Wrapper: wrapperPayment }),
         ).then(() => {
-          if(ransom.extent[0] !== obligation.ransomAmount()) {
+          const amountMath = obligation.ransomIssuer().getAmountMath();
+          if(!amountMath.isEqual(ransom.extent[0] !== obligation.ransomAmount())) {
             zcf.rejectOffer(userOfferHandle);
             return `Attempt to pay a wrong ransom amount.`;
           }

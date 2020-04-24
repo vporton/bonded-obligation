@@ -134,7 +134,7 @@ export const makeContract = harden(zcf => {
           harden({ Wrapper: wrapperPayment }),
         ).then(() => {
           const amountMath = obligation.ransomIssuer().getAmountMath();
-          if(!amountMath.isEqual(ransom.extent[0] !== obligation.ransomAmount())) {
+          if(!amountMath.isEqual(ransom.extent[0], obligation.ransomAmount())) {
             zcf.rejectOffer(userOfferHandle);
             return `Attempt to pay a wrong ransom amount.`;
           }

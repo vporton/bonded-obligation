@@ -1,6 +1,6 @@
 import { E } from '@agoric/eventual-send';
 
-class _Pledge {
+class _Obligation {
     constructor(zcf, timerService, pledge, ransomAmount, lockedUntil) {
         let _offer = null;
         const _pledge = pledge;
@@ -25,8 +25,8 @@ class _Pledge {
     }
 }
 
-_Pledge = harden(_Pledge);
+_Obligation = harden(_Obligation);
 
-export function makePledge(zcf, timerService, payment, lockedUntil) {
-    return harden(new _Pledge(zcf, timerService, payment, lockedUntil));
+export function makeObligation(zcf, timerService, payment, lockedUntil) {
+    return harden(new _Obligation(zcf, timerService, payment, lockedUntil));
 }

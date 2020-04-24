@@ -3,7 +3,7 @@ import harden from '@agoric/harden';
 import produceIssuer from '@agoric/ertp';
 import { makeZoeHelpers } from '@agoric/zoe/src/contractSupport';
 
-import { makeTimeRelease } from './pledge';
+import { makeTimeRelease, makeObligation } from './obligation';
 import { cleanProposal } from '@agoric/zoe/src/cleanProposal';
 
 
@@ -21,7 +21,8 @@ export const makeContract = harden(zcf => {
   );
   const wrapperToken = amountMath.make;
 
-  let pledges = new Map(); // from handle ({}) to payment
+  let senders = new Map(); // from handle ({}) to payment
+  let receivers = new Map(); // from handle ({}) to payment
 
   let nonce = 0;
 
@@ -30,47 +31,58 @@ export const makeContract = harden(zcf => {
     }
 
     // the contract creates an offer {give: wrapper, want: nothing} with the time release wrapper
-    const sendPledgeHook = (pledge, ransomAmount, handle, date) => userOfferHandle => {
-      const lock = makePledge(zcf, timerService, pledge, ransomAmount, date);
+    const sendPledgeHook = (receiver, pledge, ransomAmount, handle, date) => userOfferHandle => {
+      const obligation = makeObligation(zcf, timerService, pledge, ransomAmount, date);
 
-      const wrapperAmount = wrapperToken(harden([[harden(lock), ++nonce]]));
-      const wrapperPayment = mint.mintPayment(wrapperAmount);
+      // unique handles
+      const senderHandle = {};
+      const receiverHandle = {};
+
+      senders(senderHandle, obligation);
+      senders(receiverHandle, obligation);
+
+      const senderWrapperAmount = wrapperToken(harden([[harden(senderHandle)]]));
+      const senderWrapperPayment = mint.mintPayment(senderWrapperAmount);
+
+      const receiverWrapperAmount = wrapperToken(harden([[harden(receiverHandle)]]));
+      const receiverWrapperPayment = mint.mintPayment(receiverWrapperAmount);
 
       let tempContractHandle;
       const contractSelfInvite = zcf.makeInvitation(
         offerHandle => (tempContractHandle = offerHandle),
       );
 
-      pledges.set(handle, wrapperPayment);
-
       zcf
         .getZoeService()
         .offer(
           contractSelfInvite,
-          harden({ /*give: { Wrapper: wrapperAmount }*/ }),
-          harden({ Wrapper: wrapperPayment }),
+          harden({ give: { Wrapper: senderWrapperAmount } }),
+          harden({ Wrapper: senderWrapperPayment }),
         ).then(() => {
           // Don't forget to call this, otherwise the other side won't be able to get the money:
           //lock.setOffer(tempContractHandle);
 
-          zcf.reallocate(
-            [tempContractHandle, userOfferHandle],
-            [
-              zcf.getCurrentAllocation(userOfferHandle),
-              zcf.getCurrentAllocation(tempContractHandle),
-            ],
-          );
-          zcf.complete([tempContractHandle, userOfferHandle]); // FIXME: enough just one of them?
+          return receiver.receivePayment(receiverWrapperPayment)
+            .then(() => {
+              zcf.reallocate(
+                [tempContractHandle, userOfferHandle],
+                [
+                  zcf.getCurrentAllocation(userOfferHandle),
+                  zcf.getCurrentAllocation(tempContractHandle),
+                ],
+              );
+              zcf.complete([tempContractHandle, userOfferHandle]); // FIXME: enough just one of them?
+            });
           return `Pledge accepted.`;
         });
     }
 
     const receivePledgeHook = handle => userOfferHandle => {
-      const payment = pledges.get(handle);
-      if(!payment) {
+      const obligation = receivers.get(handle);
+      if(!obligation) {
         return `Trying to get non-exisiting payment.`;
       }
-      const wrapperAmount = wrapperToken(harden([[payment, ++nonce]]));
+      const wrapperAmount = wrapperToken(harden([[obligation.getPledge(), ++nonce]]));
       const wrapperPayment = mint.mintPayment(wrapperAmount);
 
       let tempContractHandle;
@@ -93,8 +105,50 @@ export const makeContract = harden(zcf => {
             ],
           );
           zcf.complete([tempContractHandle, userOfferHandle]); // FIXME: enough just one of them?
-          pledges.delete(handle); // We already delivered it.
+          receivers.delete(handle); // We already delivered it.
+          senders.delete(handle); // We already delivered it.
           return `Scheduled payment delivered.`;
+        });
+    }
+    
+    // Get back the pledge.
+    const sendRansomHook = (handle, ransom) => userOfferHandle => {
+      const obligation = senders.get(handle);
+      if(!obligation) {
+        return `Trying to get non-exisiting bond obligation.`;
+      }
+
+      const wrapperAmount = wrapperToken(harden([[obligation.getPledge().ransomAmount(), ++nonce]]));
+      const wrapperPayment = mint.mintPayment(wrapperAmount);
+
+      let tempContractHandle;
+      const contractSelfInvite = zcf.makeInvitation(
+        offerHandle => (tempContractHandle = offerHandle),
+      );
+
+      zcf
+        .getZoeService()
+        .offer(
+          contractSelfInvite,
+          harden({ give: { Wrapper: wrapperAmount } }),
+          harden({ Wrapper: wrapperPayment }),
+        ).then(() => {
+          if(ransom.extent[0] !== obligation.ransomAmount()) {
+            zcf.rejectOffer(userOfferHandle);
+            return `Attempt to pay a wrong ransom amount.`;
+          }
+    
+          zcf.reallocate(
+            [tempContractHandle, userOfferHandle],
+            [
+              zcf.getCurrentAllocation(userOfferHandle),
+              zcf.getCurrentAllocation(tempContractHandle),
+            ],
+          );
+          zcf.complete([tempContractHandle, userOfferHandle]); // FIXME: enough just one of them?
+          receivers.delete(handle); // We already delivered it.
+          senders.delete(handle); // We already delivered it.
+          return `Ransom accepted.`;
         });
     }
     
@@ -108,11 +162,19 @@ export const makeContract = harden(zcf => {
         }),
       );
 
-    const makeReceivePledgeInvite = handle => () =>
+      const makeReceivePledgeInvite = handle => () =>
       inviteAnOffer(
         harden({
           offerHook: receivePledgeHook(handle),
-          customProperties: { inviteDesc: 'get money' },
+          customProperties: { inviteDesc: 'get pledge' },
+        }),
+      );
+
+      const makeSendRansomInvite = handle => () =>
+      inviteAnOffer(
+        harden({
+          offerHook: sendRansomHook(handle),
+          customProperties: { inviteDesc: 'pay money' },
         }),
       );
 
@@ -121,10 +183,12 @@ export const makeContract = harden(zcf => {
       publicAPI: {
         makeSendInvite: makeSendPledgeInvite,
         makeReceivePledgeInvite,
-        makeReceiveRansomInvite,
+        makeSendRansomInvite,
         //currency: wrapperToken,
         issuer: issuer,
       },
     });
+
+    // TODO: Query the pledge and ransom amounts.
   });
 });

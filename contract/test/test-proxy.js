@@ -65,40 +65,52 @@ test(`Time release contract`, async t => {
     const pledge = housesMint.mintPayment(houses(1));
     const ransomAmount = 1000;
 
-    async function sendPledge(date) {
-      let receiverPayment;
-      const receiver = {
-        receivePayment(payment){
-            receiverPayment = payment;
-        }
+    class MyTester {
+      constructor() {
+        this.receiverPayment = null;
       }
 
-      const sendInvite = inviteIssuer.claim(publicAPI.makeSendPledgeInvite(
-        harden(receiver), harden(pledge), harden(issuer), harden(ransomAmount), harden(date)
-      )());
-      const aliceProposal = {};
-      return zoe
-        .offer(sendInvite, harden(aliceProposal), {})
-        .then(
-          async ({
-            outcome: outcomeP,
-            payout,
-            cancelObj: { cancel: complete },
-            offerHandle,
-          }) => {
-            const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper);
+      async sendPledge(date) {
+        let that = this;
+        const receiver = {
+          receivePayment(payment){
+            that.receiverPayment = payment;
+          }
+        }
 
-            return {
-              publicAPI,
-              operaPayout: payout,
-              complete,
-            };
-          },
-        )
+        const sendInvite = inviteIssuer.claim(publicAPI.makeSendPledgeInvite(
+          harden(receiver), harden(pledge), harden(issuer), harden(ransomAmount), harden(date)
+        )());
+        const aliceProposal = {};
+        return zoe
+          .offer(sendInvite, harden(aliceProposal), {})
+          .then(
+            async ({
+              outcome: outcomeP,
+              payout,
+              cancelObj: { cancel: complete },
+              offerHandle,
+            }) => {
+              const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper);
+
+              return {
+                publicAPI,
+                receiverPayment,
+              };
+            },
+          )
+      }
+
+      // receivePledge({publicAPI, receiverPayment}) {
+      //   const handle = 
+      // }
     }
 
     async function pushPullMoney(date, positive) {
-      sendPledge(date)
+      let myTester = new MyTester();
+
+      myTester.sendPledge(date)
+        .then(myTester.receivePledge)
         // .then(() => {
         //   const receiveInvite = inviteIssuer.claim(publicAPI.makeReceiveInvite(handle)());
         //   const bobProposal = {}

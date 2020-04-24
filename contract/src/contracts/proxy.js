@@ -31,7 +31,8 @@ export const makeContract = harden(zcf => {
     }
 
     // the contract creates an offer {give: wrapper, want: nothing} with the time release wrapper
-    const sendPledgeHook = (receiver, pledge, ransomIssuer, ransomAmount, handle, date) => userOfferHandle => {
+    // `pledge` is a payment
+    const sendPledgeHook = (receiver, pledge, ransomIssuer, ransomAmount, date) => userOfferHandle => {
       const obligation = makeObligation(zcf, timerService, pledge, ransomIssuer, ransomAmount, date);
 
       // unique handles
@@ -155,10 +156,11 @@ export const makeContract = harden(zcf => {
     
     const { inviteAnOffer } = makeZoeHelpers(zcf);   
     
-    const makeSendPledgeInvite = (payment, handler, date) => () =>
+    // `pledge` is a payment
+    const makeSendPledgeInvite = (receiver, pledge, ransomIssuer, ransomAmount, date) => () =>
       inviteAnOffer(
         harden({
-          offerHook: sendPledgeHook(payment, handler, date),
+          offerHook: sendPledgeHook(receiver, pledge, ransomIssuer, ransomAmount, date),
           customProperties: { inviteDesc: 'offer' },
         }),
       );
@@ -171,10 +173,10 @@ export const makeContract = harden(zcf => {
         }),
       );
 
-      const makeSendRansomInvite = handle => () =>
+      const makeSendRansomInvite = (handle, ransom) => () =>
       inviteAnOffer(
         harden({
-          offerHook: sendRansomHook(handle),
+          offerHook: sendRansomHook(handle, ransom),
           customProperties: { inviteDesc: 'pay money' },
         }),
       );
@@ -182,7 +184,7 @@ export const makeContract = harden(zcf => {
     return harden({
       invite: zcf.makeInvitation(adminHook),
       publicAPI: {
-        makeSendInvite: makeSendPledgeInvite,
+        makeSendPledgeInvite,
         makeReceivePledgeInvite,
         makeSendRansomInvite,
         //currency: wrapperToken,

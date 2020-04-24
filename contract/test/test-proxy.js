@@ -7,7 +7,7 @@ import { E } from '@agoric/eventual-send';
 import { makeZoe } from '@agoric/zoe';
 import buildManualTimer from '@agoric/zoe/tools/manualTimer'
 
-const operaConcertTicketRoot = `${__dirname}/../src/contracts/proxy.js`;
+const contractRoot = `${__dirname}/../src/contracts/proxy.js`;
 
 test(`Time release contract`, async t => {
   // Setup initial conditions
@@ -16,7 +16,7 @@ test(`Time release contract`, async t => {
 
   const timerService = buildManualTimer(console.log);
  
-  const contractReadyP = bundleSource(operaConcertTicketRoot).then(
+  const contractReadyP = bundleSource(contractRoot).then(
     ({ source, moduleFormat }) => {
       const installationHandle = zoe.install(source, moduleFormat);
 
@@ -53,17 +53,22 @@ test(`Time release contract`, async t => {
     },
   )
 
-  const handle = {}; // secret handler
-
   contractReadyP.then(({ publicAPI }) => {
     const currencyIssuer = produceIssuer('BaytownBucks')
     const { mint: baytownBucksMint, issuer } = currencyIssuer;
     const baytownBucks = issuer.getAmountMath().make;
 
-    const payment = baytownBucksMint.mintPayment(baytownBucks(1000));
+    const housesIssuerMain = produceIssuer('Houses')
+    const { mint: housesMint, housesIssuer } = housesIssuerMain;
+    const houses = housesIssuer.getAmountMath().make;
+
+    const pledge = housesMint.mintPayment(houses(1));
+    const ransomAmount = 1000;
 
     async function pushPullMoney(date, positive) {
-      const sendInvite = inviteIssuer.claim(publicAPI.makeSendInvite(harden(payment), harden(handle), harden(date))());
+      const sendInvite = inviteIssuer.claim(publicAPI.makeSendPledgeInvite(
+        harden(receiver), harden(pledge), harden(issuer), harden(ransomAmount), harden(date)
+      )());
       const aliceProposal = {};
       return zoe
         .offer(sendInvite, harden(aliceProposal), {})
@@ -83,37 +88,37 @@ test(`Time release contract`, async t => {
             };
           },
         )
-        .then(() => {
-          const receiveInvite = inviteIssuer.claim(publicAPI.makeReceiveInvite(handle)());
-          const bobProposal = {}
-          return zoe
-            .offer(receiveInvite, harden(bobProposal), {})
-            .then(
-              async ({
-                outcome: outcomeP,
-                payout,
-                cancelObj: { cancel: complete },
-                offerHandle,
-              }) => {
-                const wrapperPayment = await (await payout).Wrapper;
-                const amount = await E(publicAPI.issuer).getAmountOf(wrapperPayment);
-                const payment = await E(publicAPI.issuer).getAmountOf(amount.extent[0][0]);
-                const timeRelease = payment.extent[0][0];
-                const realPayment = await timeRelease.getPayment()
-                if(!positive) {
-                  t.equal(realPayment, null, `There is no payment yet.`)
-                } else {
-                  t.equal((await issuer.getAmountOf(realPayment)).extent, 1000, `correct payment amount`)
+        // .then(() => {
+        //   const receiveInvite = inviteIssuer.claim(publicAPI.makeReceiveInvite(handle)());
+        //   const bobProposal = {}
+        //   return zoe
+        //     .offer(receiveInvite, harden(bobProposal), {})
+        //     .then(
+        //       async ({
+        //         outcome: outcomeP,
+        //         payout,
+        //         cancelObj: { cancel: complete },
+        //         offerHandle,
+        //       }) => {
+        //         const wrapperPayment = await (await payout).Wrapper;
+        //         const amount = await E(publicAPI.issuer).getAmountOf(wrapperPayment);
+        //         const payment = await E(publicAPI.issuer).getAmountOf(amount.extent[0][0]);
+        //         const timeRelease = payment.extent[0][0];
+        //         const realPayment = await timeRelease.getPayment()
+        //         if(!positive) {
+        //           t.equal(realPayment, null, `There is no payment yet.`)
+        //         } else {
+        //           t.equal((await issuer.getAmountOf(realPayment)).extent, 1000, `correct payment amount`)
         
-                  return {
-                    publicAPI,
-                    operaPayout: payout,
-                    complete,
-                  };
-                }
-              }
-            )
-        })
+        //           return {
+        //             publicAPI,
+        //             operaPayout: payout,
+        //             complete,
+        //           };
+        //         }
+        //       }
+        //     )
+        // })
         .then(() => {
           return { publicAPI };
         });

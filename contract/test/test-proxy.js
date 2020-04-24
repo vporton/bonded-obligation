@@ -59,13 +59,20 @@ test(`Time release contract`, async t => {
     const baytownBucks = issuer.getAmountMath().make;
 
     const housesIssuerMain = produceIssuer('Houses')
-    const { mint: housesMint, housesIssuer } = housesIssuerMain;
+    const { mint: housesMint, issuer: housesIssuer } = housesIssuerMain;
     const houses = housesIssuer.getAmountMath().make;
 
     const pledge = housesMint.mintPayment(houses(1));
     const ransomAmount = 1000;
 
-    async function pushPullMoney(date, positive) {
+    async function sendPledge(date) {
+      let receiverPayment;
+      const receiver = {
+        receivePayment(payment){
+            receiverPayment = payment;
+        }
+      }
+
       const sendInvite = inviteIssuer.claim(publicAPI.makeSendPledgeInvite(
         harden(receiver), harden(pledge), harden(issuer), harden(ransomAmount), harden(date)
       )());
@@ -88,6 +95,10 @@ test(`Time release contract`, async t => {
             };
           },
         )
+    }
+
+    async function pushPullMoney(date, positive) {
+      sendPledge(date)
         // .then(() => {
         //   const receiveInvite = inviteIssuer.claim(publicAPI.makeReceiveInvite(handle)());
         //   const bobProposal = {}
@@ -125,10 +136,10 @@ test(`Time release contract`, async t => {
     }
 
     return pushPullMoney(1, false)
-      .then((x) => {
-        E(timerService).tick("Going to the future");
-        return pushPullMoney(1, true);
-      });
+      // .then((x) => {
+      //   E(timerService).tick("Going to the future");
+      //   return pushPullMoney(1, true);
+      // });
   })
   .catch(err => {
     console.error('Error in last Time Release part', err);

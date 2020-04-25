@@ -21,11 +21,9 @@ class _Obligation {
         this.ransomAmount = function() {
             return _ransomAmount;
         }
-        // SECURITY: Don't forget to call this function,
-        // otherwise getPayment() will always return null.
-        this.setOffer = function(offer) {
-            _offer = offer;
-        }
+        // this.setOffer = function(offer) {
+        //     _offer = offer;
+        // }
     }
 }
 

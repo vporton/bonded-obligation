@@ -63,17 +63,15 @@ export const makeContract = harden(zcf => {
           // Don't forget to call this, otherwise the other side won't be able to get the money:
           //lock.setOffer(tempContractHandle);
 
-          return receiver.receivePayment(receiverWrapperPayment)
-            .then(() => {
-              zcf.reallocate(
-                [tempContractHandle, userOfferHandle],
-                [
-                  zcf.getCurrentAllocation(userOfferHandle),
-                  zcf.getCurrentAllocation(tempContractHandle),
-                ],
-              );
-              zcf.complete([tempContractHandle, userOfferHandle]); // FIXME: enough just one of them?
-            });
+          receiver.receivePayment(receiverWrapperPayment)
+          zcf.reallocate(
+            [tempContractHandle, userOfferHandle],
+            [
+              zcf.getCurrentAllocation(userOfferHandle),
+              zcf.getCurrentAllocation(tempContractHandle),
+            ],
+          );
+          zcf.complete([tempContractHandle, userOfferHandle]); // FIXME: enough just one of them?
           return `Pledge accepted.`;
         });
     }

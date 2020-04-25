@@ -8,7 +8,7 @@
         "type": "node",
         "request": "launch",
         "name": "Run Test",
-        "program": "${workspaceFolder}/contract/test/test-contract.js",
+        "program": "${workspaceFolder}/contract/test/test-proxy.js",
         "runtimeExecutable": "node",
         "runtimeArgs": [
             "-r", "esm"

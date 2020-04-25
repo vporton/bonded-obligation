@@ -94,7 +94,7 @@ test(`Time release contract`, async t => {
 
               return {
                 publicAPI,
-                receiverPayment,
+                receiverPayment: this.receiverPayment,
               };
             },
           )
@@ -104,7 +104,7 @@ test(`Time release contract`, async t => {
         const receiverAmount = await E(publicAPI.issuer).getAmountOf(receiverPayment);
         const handle = receiverAmount.extent[0][0];
 
-        const receivePledgeInvite = inviteIssuer.claim(publicAPI.makeReceivePledgeInvite(harden(handle)()));
+        const receivePledgeInvite = inviteIssuer.claim(publicAPI.makeReceivePledgeInvite(harden(handle))());
         const bobProposal = {};
         return zoe
           .offer(receivePledgeInvite, harden(bobProposal), {})

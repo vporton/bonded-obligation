@@ -85,23 +85,19 @@ test(`Time release contract`, async t => {
           .offer(sendPledgeInvite, harden(aliceProposal), {})
           .then(
             async ({
-              outcome: outcomeP,
               payout,
-              cancelObj: { cancel: complete },
-              offerHandle,
             }) => {
-              const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper);
+              const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper); // wait for payout to complete
 
               return {
                 publicAPI,
-                receiverPayment: this.receiverPayment,
               };
             },
           )
       }
 
-      async receivePledge({publicAPI, receiverPayment}) {
-        const receiverAmount = await E(publicAPI.issuer).getAmountOf(receiverPayment);
+      async receivePledge({publicAPI}) {
+        const receiverAmount = await E(publicAPI.issuer).getAmountOf(this.receiverPayment);
         const handle = receiverAmount.extent[0][0];
 
         const receivePledgeInvite = inviteIssuer.claim(publicAPI.makeReceivePledgeInvite(harden(handle))());
@@ -116,11 +112,11 @@ test(`Time release contract`, async t => {
               offerHandle,
             }) => {
               const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper);
-              const pledge = amount.extent[0][0];
+              // const pledge = amount.extent[0][0];
 
               return {
                 publicAPI,
-                pledge,
+                // pledge,
               };
             },
           )
@@ -131,20 +127,20 @@ test(`Time release contract`, async t => {
       let myTester = new MyTester();
 
       return myTester.sendPledge(date)
-        .then(myTester.receivePledge)
-        .then(({publicAPI, pledge}) => {
-          t.equal(pledge, null, `pledge too early to return.`)
-        })
-        .then(() => {
-          E(timerService).tick("Going to the future");
-        })
-        .then(myTester.receivePledge)
-        .then(({publicAPI, pledge}) => {
-          console.log("pledge", pledge);
-        })
-        .then(() => {
-          return { publicAPI };
-        });
+        .then(async ({publicAPI}) => await myTester.receivePledge({publicAPI}))
+        // .then(({publicAPI, pledge}) => {
+        //   t.equal(pledge, null, `pledge too early to return.`)
+        // })
+        // .then(() => {
+        //   E(timerService).tick("Going to the future");
+        // })
+        // .then(myTester.receivePledge)
+        // .then(({publicAPI, pledge}) => {
+        //   console.log("pledge", pledge);
+        // })
+        // .then(() => {
+        //   return { publicAPI };
+        // });
     }
 
     return pushPullMoney(1, false)

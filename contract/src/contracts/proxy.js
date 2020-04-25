@@ -32,7 +32,7 @@ export const makeContract = harden(zcf => {
 
     // the contract creates an offer {give: wrapper, want: nothing} with the time release wrapper
     // `pledge` is a payment
-    const sendPledgeHook = (receiver, pledge, ransomIssuer, ransomAmount, date) => userOfferHandle => {
+    const sendPledgeHook = (receiver, pledge, ransomIssuer, ransomAmount, date) => async userOfferHandle => {
       const obligation = makeObligation(zcf, timerService, pledge, ransomIssuer, ransomAmount, date);
 
       // unique handles
@@ -53,13 +53,13 @@ export const makeContract = harden(zcf => {
         offerHandle => (tempContractHandle = offerHandle),
       );
 
-      zcf
+      return zcf
         .getZoeService()
         .offer(
           contractSelfInvite,
           harden({ give: { Wrapper: senderWrapperAmount } }),
           harden({ Wrapper: senderWrapperPayment }),
-        ).then(() => {
+        ).then(async () => {
           // Don't forget to call this, otherwise the other side won't be able to get the money:
           //lock.setOffer(tempContractHandle);
 
@@ -89,7 +89,7 @@ export const makeContract = harden(zcf => {
         offerHandle => (tempContractHandle = offerHandle),
       );
 
-      zcf
+      return zcf
         .getZoeService()
         .offer(
           contractSelfInvite,

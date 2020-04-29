@@ -18,14 +18,17 @@ test(`Time release contract`, async t => {
  
   const contractReadyP = bundleSource(contractRoot).then(
     ({ source, moduleFormat }) => {
+      console.log("X1");
       const installationHandle = zoe.install(source, moduleFormat);
 
       return zoe
         .makeInstance(installationHandle, {}, { timerService })
         .then(myInvite => {
+          console.log("X2");
           return inviteIssuer
             .getAmountOf(myInvite)
             .then(({ extent: [{ instanceHandle: auditoriumHandle }] }) => {
+              console.log("X3");
               const { publicAPI } = zoe.getInstanceRecord(auditoriumHandle);
 
               return (
@@ -40,6 +43,7 @@ test(`Time release contract`, async t => {
                       cancelObj: { cancel: complete },
                       offerHandle,
                     }) => {
+                      console.log("X4");
                       return {
                         publicAPI,
                         operaPayout: payout,
@@ -54,6 +58,7 @@ test(`Time release contract`, async t => {
   )
 
   contractReadyP.then(({ publicAPI }) => {
+    console.log("X5");
     const currencyIssuer = produceIssuer('BaytownBucks')
     const { mint: baytownBucksMint, issuer } = currencyIssuer;
     const baytownBucks = issuer.getAmountMath().make;
@@ -87,6 +92,7 @@ test(`Time release contract`, async t => {
             async ({
               payout,
             }) => {
+              console.log("X6");
               const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper); // wait for payout to complete
 
               return {
@@ -97,6 +103,7 @@ test(`Time release contract`, async t => {
       }
 
       async receivePledge({publicAPI}) {
+        console.log("X8");
         const receiverAmount = await E(publicAPI.issuer).getAmountOf(this.receiverPayment);
         const handle = receiverAmount.extent[0][0];
 
@@ -111,6 +118,7 @@ test(`Time release contract`, async t => {
               cancelObj: { cancel: complete },
               offerHandle,
             }) => {
+              console.log("X7");
               const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper);
               // const pledge = amount.extent[0][0];
 

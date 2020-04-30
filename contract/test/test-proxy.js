@@ -118,7 +118,7 @@ test(`Time release contract`, async t => {
               cancelObj: { cancel: complete },
               offerHandle,
             }) => {
-              console.log("X7");
+              console.log("X7"/*, await outcomeP*/);
               const amount = await E(publicAPI.issuer).getAmountOf((await payout).Wrapper);
               // const pledge = amount.extent[0][0];
 

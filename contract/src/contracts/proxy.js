@@ -40,7 +40,7 @@ export const makeContract = harden(zcf => {
       const receiverHandle = {};
 
       senders.set(senderHandle, obligation);
-      senders.set(receiverHandle, obligation);
+      receivers.set(receiverHandle, obligation);
 
       const senderWrapperAmount = wrapperToken(harden([[harden(senderHandle)]]));
       const senderWrapperPayment = mint.mintPayment(senderWrapperAmount);
